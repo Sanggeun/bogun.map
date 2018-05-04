@@ -1,0 +1,25 @@
+---
+title: "README"
+author: "baesg"
+date: "2018년 5월 4일"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+
+
+```
+
+# 목적    
+
+- 보건 분야 지역지표의 지도 시각화를 위한 데이터와 함수 정리  
+
+# 주요 내용  
+
+- 주요 지도(시군구별, 읍면동별, 보건소별)  
+- 지도 생성 함수  
+- 지표 시각화 함수  
+- 점, 선, 면 그리기 함수  
