@@ -36,6 +36,7 @@ server <- function(input, output) {
   
     library(tidyverse)
     library(viridis)
+    library(rgeos)
   
     data_to_map <- function(map, data, merge_key = "adm_dr_nm", map_key = "adm_dr_cd", data_key = "dong"){
     map@data$id <- rownames(map@data)
