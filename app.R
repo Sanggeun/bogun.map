@@ -18,6 +18,7 @@ ui <- fluidPage(
          selectInput("color", "색상표시",choices =c("viridis","blue_red")),
          radioButtons("type", "지도유형", choices=c("sigungu","district","dong")),
          fileInput("map", "지도선택", buttonLabel = "지도선택"),
+         textInput("data_key", "지역변수명", value = "dong"),
          actionButton("plotting","지도그리기"),
          textInput("fig","파일이름","fig-"),
          radioButtons("format", "파일유형",choices=c("PNG","JPG","PDF")),
@@ -71,7 +72,7 @@ server <- function(input, output) {
     
    
     data_map <- data_to_map(map, data, 
-                               merge_key = merge_key, map_key = map_key, data_key = data_key)
+                               merge_key = merge_key, map_key = map_key, data_key = input$data_key)
     
     plot_map(data_map, re_var = input$re_var, index_type = index_type, 
              legend_label = input$label, color_type = input$color,
