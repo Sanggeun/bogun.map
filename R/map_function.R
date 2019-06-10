@@ -1,6 +1,7 @@
 library(tidyverse)
 library(viridis)
 library(rgeos)
+# devtools::install_github("slowkow/ggrepel")
 
 data_to_map <- function(map, data, merge_key = "adm_dr_nm", map_key = "adm_dr_cd", data_key = "dong"){
   map@data$id <- rownames(map@data)
@@ -51,3 +52,24 @@ plot_map <- function(map , re_var, index_type,
   )
   
 }
+
+name_in_map <- function(map, name_var, name = NULL) {
+  
+  map@data$id <- rownames(map@data)
+  map_f <- fortify(map, region = "id")
+  # 중심좌표를 계산
+  distcenters <- ddply(map_f, .(id), summarize, clat = mean(lat), clong = mean(long))
+  # 읍면동 이름 붙이기
+  if (is.null(name)) {
+  naming <- map@data[[name_var]]
+  }
+  if (!is.null(name)) {
+    naming <- name
+  }
+  
+  names(naming) <- map@data[["id"]]
+  distcenters$name <- naming[distcenters$id]
+  return(distcenters)
+}
+
+
