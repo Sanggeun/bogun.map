@@ -1,6 +1,6 @@
 library(shiny)
 
-need_pkg <- c("ggplot2","DT", "viridis", "rgeos", "maptools", "ggrepel")
+need_pkg <- c("devtools","ggplot2","DT", "viridis", "rgeos", "maptools", "ggrepel")
 has <- need_pkg %in% rownames(installed.packages())
 if(any(!has)) install.packages(need_pkg[!has])
 
