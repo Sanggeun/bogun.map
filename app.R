@@ -1,11 +1,13 @@
 library(shiny)
 
-need_pkg <- c("devtools","ggplot2","DT", "viridis", "rgeos", "maptools", "ggrepel")
+need_pkg <- c("devtools", "plyr", "ggplot2","DT", "viridis", "rgeos", "maptools", "ggrepel")
 has <- need_pkg %in% rownames(installed.packages())
 if(any(!has)) install.packages(need_pkg[!has])
 
 devtools::install_github("Sanggeun/map.choropleth")
+devtools::install_github("Sanggeun/g.function.bsg")
 library(map.choropleth)
+library(plyr)
 library(ggplot2)
 library(viridis)
 library(DT)
@@ -31,12 +33,19 @@ ui <- fluidPage(
          actionButton("plotting","지도그리기"),
          textInput("fig","파일이름","fig-"),
          radioButtons("format", "파일유형",choices=c("PNG","JPG","PDF")),
-         downloadButton("downloaddata","Download_images")
+         downloadButton("downloaddata","Download_images"),
+         radioButtons("naming_map_type", "지역명 타입", choices =c("sigungu", "district", "dong")),
+         fileInput("naming_map", "지역명지도", buttonLabel = "지역명지도"),
+         actionButton("naming","지역명 넣기"),
+         textInput("fig2","파일이름","fig-"),
+         radioButtons("format2", "파일유형",choices=c("PNG","JPG","PDF")),
+         downloadButton("downloaddata2","Download_images")
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
         DT::dataTableOutput("table"),
+        plotOutput("map_1"),
         plotOutput("map_2")
      
         
@@ -53,7 +62,7 @@ server <- function(input, output) {
     read.csv(input$data$datapath, fileEncoding = "euc-kr")
     }))
   
-  output_map <- reactive({
+  output_data <- reactive({
     req(input$data)
     if(input$type == "dong") {
       map_merge_key <- "adm_dr_nm"
@@ -70,21 +79,22 @@ server <- function(input, output) {
       
     }
     
+    
+    
+    data <- read.csv(input$data$datapath, fileEncoding = "euc-kr", stringsAsFactors = FALSE)
+    map <- readRDS(input$map$datapath)
+    
+    data_map <- data_to_map(map, data, 
+                               map_merge_key = map_merge_key, map_key = map_key, data_key = input$data_key)
+    return(data_map)
+  })
+  
+  output_map <- reactive({
     if(input$index_type == "높을수록 좋음") {
       index_type <- 1
     } else {
       index_type <- -1
     }
-    
-    data <- read.csv(input$data$datapath, fileEncoding = "euc-kr", stringsAsFactors = FALSE)
-    map <- readRDS(input$map$datapath)
-    if (!all(Encoding(map[[map_merge_key]]) == "UTF-8")) {
-    map[[map_merge_key]] <- iconv(map[[map_merge_key]], "euc-kr", "UTF-8")
-    row.names(map@data) <- iconv(row.names(map@data), "euc-kr", "UTF-8")
-    }
-    
-    data_map <- data_to_map(map, data, 
-                               map_merge_key = map_merge_key, map_key = map_key, data_key = input$data_key)
     
     ## 테마 지정
     theme.ti <- element_text(family="NanumGothic", face="bold", size=12) #그래프 제목 스타일 변경
@@ -92,19 +102,55 @@ server <- function(input, output) {
     theme.leti<-element_text(family="NanumGothic", face="bold") #범례 제목 (legend) 스타일 변경
     theme.lete<-element_text(family="NanumGothic") #범례 항목 (legend) 스타일 변경
     
-    plot_map(data_map, re_var = input$re_var, index_type = index_type, 
+    plot_map(output_data(), re_var = input$re_var, index_type = index_type, 
              legend_label = input$label, color_type = input$color,
              path_color = "white") +
       theme(axis.title = theme.ax, plot.title = theme.ti, legend.title = theme.leti, legend.text = theme.lete)
-   
+  })
+  
+  output_map_2 <- reactive({
+    map_name <- readRDS(input$naming_map$datapath)
+    if (input$naming_map_type == "dong") {
+      region_name <- name_in_map(map_name, name_var = "adm_dr_nm")
+    } else if (input$naming_map_type == "district") {
+      region_name <- name_in_map(map_name, name_var = "district")
+    } else if (input$naming_map_type == "sigungu") {
+      region_name <- name_in_map(map_name, name = c("남구","달서구","달성군","동구","북구","서구","수성구","중구"))
+    }
+    
+    if(input$index_type == "높을수록 좋음") {
+      index_type <- 1
+    } else {
+      index_type <- -1
+    }
+    
+    ## 테마 지정
+    theme.ti <- element_text(family="NanumGothic", face="bold", size=12) #그래프 제목 스타일 변경
+    theme.ax <- element_text(family="NanumGothic", face="bold", size=10, angle=00, hjust=0.54, vjust=0.5) #그래프 축 이름 스타일 변경
+    theme.leti<-element_text(family="NanumGothic", face="bold") #범례 제목 (legend) 스타일 변경
+    theme.lete<-element_text(family="NanumGothic") #범례 항목 (legend) 스타일 변경
+    
+    plot_map(output_data(), re_var = input$re_var, index_type = index_type, 
+             legend_label = input$label, color_type = input$color,
+             path_color = "white") +
+      ggrepel::geom_label_repel(data = region_name, aes(x=clong, y=clat, group = NULL, fill = NULL, label = name), family = "NanumGothic") + 
+      theme(axis.title = theme.ax, plot.title = theme.ti, legend.title = theme.leti, legend.text = theme.lete)
+    
     
   })
   
-  output$map_2 <- renderPlot({
+  output$map_1 <- renderPlot({
     input$plotting
+    isolate(output_data())
     isolate(output_map())
+  })
+  
+  output$map_2 <- renderPlot({
+    input$naming
+    isolate(output_map_2())
     
   })
+  
   output$downloaddata <- downloadHandler(
     filename = paste0(input$fig, ".", switch(
       input$format, PDF = "pdf", PNG = "png", JPG = "jpg"))
@@ -112,6 +158,15 @@ server <- function(input, output) {
     content = function(file) {
       ggsave(file, output_map())
      
+    }
+  )
+  output$downloaddata2 <- downloadHandler(
+    filename = paste0(input$fig2, ".", switch(
+      input$format2, PDF = "pdf", PNG = "png", JPG = "jpg"))
+    ,
+    content = function(file) {
+      ggsave(file, output_map_2())
+      
     }
   )
   
